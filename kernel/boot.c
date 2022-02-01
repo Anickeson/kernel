@@ -3,7 +3,6 @@
 
 #include "stivale2.h"
 #include "util.h"
-#include "kprint.h"
 
 // Reserve space for the stack
 static uint8_t stack[8192];
@@ -70,16 +69,37 @@ void term_setup(struct stivale2_struct* hdr) {
 	term_write = (term_write_t)tag->term_write;
 }
 
-void _start(struct stivale2_struct* hdr) {
-  // We've booted! Let's start processing tags passed to use from the bootloader
-  term_setup(hdr);
 
-  // Print a greeting
-  term_write("Hello Kernel!\n", 14);
-  /*for (char i = 'a'; i <= 'z'; i++){
-		kprint_c(i);
-		kprint_c(' ');
-  }*/
+//Kernel Implimentation Task #1, a bunch of printing
+void kprint_c(char c){
+	term_write(&c, 1);
+}
+
+void krpint_s (const char * str){
+	//will need to find strlen then its a term_write call
+}
+
+void kprint_d (uint64_t value){
+
+}
+
+void kprint_x (uint64_t value){
+
+}
+
+void kprint_p(void * ptr){
+
+}
+
+void _start(struct stivale2_struct* hdr) {
+	// We've booted! Let's start processing tags passed to use from the bootloader
+	term_setup(hdr);
+
+	// Print a greeting
+	term_write("Hello Kernel!\n", 14);
+
+	kprint_c('a');
+
 	// We're done, just hang...
 	halt();
 }
