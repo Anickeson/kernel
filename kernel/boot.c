@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stddef.h>
+#include <stdarg.h>
 
 #include "stivale2.h"
 #include "util.h"
@@ -125,46 +126,91 @@ void kprint_x (uint64_t value){
 	term_write(&hex_digits[printed_val], 1);
 }
 
+//prints the address stored in a pointer
 void kprint_p(void * ptr){
-	//this will be very similar to printing in hexadecimal except it could be a bit bigger on average
 	uint64_t num = ptr;
 	kprint_s("0x");
 	kprint_x(num);
 }
 
+//imp of printf done in class
+void kprintf(const char* format, ...) {
+  // Start processing variadic arguments
+  va_list args;
+  va_start(args, format);
+
+  // Loop until we reach the end of the format string
+  size_t index = 0;
+  while (format[index] != '\0') {
+    // Is the current charater a '%'?
+    if (format[index] == '%') {
+      // Yes, print the argument
+      index++;
+      switch(format[index]) {
+        case '%':
+          kprint_c('%');
+          break;
+        case 'c':
+          kprint_c(va_arg(args, int));
+          break;
+        case 's':
+          kprint_s(va_arg(args, char*));
+          break;
+        case 'd':
+          kprint_d(va_arg(args, uint64_t));
+          break;
+        case 'x':
+          kprint_x(va_arg(args, int64_t));
+          break;
+        case 'p':
+          kprint_p(va_arg(args, void*));
+          break;
+        default:
+          kprint_s("<not supported>");
+      }
+    } else {
+      // No, just a normal character. Print it.
+      kprint_c(format[index]);
+    }
+    index++;
+  }
+
+  // Finish handling variadic arguments
+  va_end(args);
+}
+
+
+
+//Implementation Task #2 printing usable memory mappings
+//must have the header tag passed in
 void kprint_usable_mem(struct stivale2_struct* hdr) {
 	//will need to iterate over the memmap (stivale_mmap_entry) field of the memmap tag
 	//the loop will loop n times, n being defined by the entries field of the tag struct
 	
+	//tag ids to be passed into find_tag
 	uint64_t hhdm_tag_id = 12748887341935670671;
 	uint64_t mem_tag_id = 2416171985333837319;
-
+	
+	//storing resulting tags from find_tag operation
 	struct stivale2_struct_tag_memmap* memmap_tag = find_tag(hdr, mem_tag_id);
 	struct stivale2_struct_tag_hhdm* hhdm_tag = find_tag(hdr, hhdm_tag_id);
 
+	//storing base address of usable memory mapping and how large the mapping is
 	uint64_t base;
-	uint64_t length; //these will be used for mem addresses
+	uint64_t length;
 
 	for (uint64_t i = 0; i < memmap_tag->entries; i++){
 	
 	//at each indiviual entry we will check the type to see if it is usable (== 1)
 	//if it is usable then we get the base and the length to calculate the start and finish of the mapping
-		if (memmap_tag->memmap[i].type == 1){
+		if (memmap_tag->memmap[i].type == 1 && memmap_tag->memmap[i].length > 0){
 			base = memmap_tag->memmap[i].base;
 			length = memmap_tag->memmap[i].length;
+
+			//printing out the mappings after recieving all necessary info
+			kprintf("%p-%p mapped at %p-%p\n", (void *) base, (void *) base + length,
+				(void *) base + hhdm_tag->addr, (void *) base + length + hhdm_tag->addr);
 		}
-	
-	//after getting physical addresses we will need to figure out how to convert to virtual addresses
-	
-	//after we get all of this we will need a kprintf statement
-	//otherwise we'll have to combine a bunch of kprint statements :(
-		kprint_p((void *) base);
-		kprint_c('-');
-		kprint_p((void *) base + length);
-		kprint_s(" mapped at ");
-		kprint_p((void *) base + hhdm_tag->addr); //these are for the virtual addresses, I just need to figure out what to add
-		kprint_p((void *) base + length + hhdm_tag->addr); //the information I'm looking for is probably in a tag
-		kprint_c('\n');
 	}
 }
 
