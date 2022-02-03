@@ -132,19 +132,26 @@ void kprint_p(void * ptr){
 	kprint_x(num);
 }
 
-void kprint_usable_mem(struct strivale2_struct_tag_memmap* memmap_entries) {
+void kprint_usable_mem(struct stivale2_struct* hdr) {
 	//will need to iterate over the memmap (stivale_mmap_entry) field of the memmap tag
 	//the loop will loop n times, n being defined by the entries field of the tag struct
 	
+	uint64_t hhdm_tag_id = 12748887341935670671;
+	uint64_t mem_tag_id = 2416171985333837319;
+
+	struct stivale2_struct_tag_memmap* memmap_tag = find_tag(hdr, mem_tag_id);
+	struct stivale2_struct_tag_hhdm* hhdm_tag = find_tag(hdr, hhdm_tag_id);
+
 	uint64_t base;
 	uint64_t length; //these will be used for mem addresses
-	for (uint64_t i = 0; i < memmap_entries->entries; i++){
+
+	for (uint64_t i = 0; i < memmap_tag->entries; i++){
 	
 	//at each indiviual entry we will check the type to see if it is usable (== 1)
 	//if it is usable then we get the base and the length to calculate the start and finish of the mapping
-		if (memmap_entries->memmap[i]->type == 1){
-			base = memmap_entries->memmap.base;
-			length = memmap_entries->memmap.length;
+		if (memmap_tag->memmap[i].type == 1){
+			base = memmap_tag->memmap[i].base;
+			length = memmap_tag->memmap[i].length;
 		}
 	
 	//after getting physical addresses we will need to figure out how to convert to virtual addresses
@@ -155,8 +162,9 @@ void kprint_usable_mem(struct strivale2_struct_tag_memmap* memmap_entries) {
 		kprint_c('-');
 		kprint_p((void *) base + length);
 		kprint_s(" mapped at ");
-		//kprint_p(); these are for the virtual addresses, I just need to figure out what to add
-		//kprint_p(); the information I'm looking for is probably in a tag
+		kprint_p((void *) base + hhdm_tag->addr); //these are for the virtual addresses, I just need to figure out what to add
+		kprint_p((void *) base + length + hhdm_tag->addr); //the information I'm looking for is probably in a tag
+		kprint_c('\n');
 	}
 }
 
@@ -167,9 +175,7 @@ void _start(struct stivale2_struct* hdr) {
 	// Print a greeting
 	term_write("Hello Kernel!\n", 14);
 	
-	uint64_t mem_tag_id = 2416171985333837319;
-	struct stivale2_struct_tag_memmap* memmap_tag = (struct stivale2_struct_tag_memmap *) find_tag(hdr, mem_tag_id);
-	kprint_usable_mem(memmap_tag);
+	kprint_usable_mem(hdr);
 
 
 
