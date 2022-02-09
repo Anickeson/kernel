@@ -17,6 +17,13 @@ static struct stivale2_header_tag_terminal terminal_hdr_tag = {
   .flags = 0
 };
 
+static struct stivale2_tag unmap_null_hdr_tag = {
+	.identifier = STIVALE2_HEADER_TAG_UNMAP_NULL_ID,
+	//adding unmap_null_hdr_tag to terminal_hdr_tag, in order to unmap 0x0
+	.next = (uintptr_t)&unmap_null_hdr_tag
+
+};
+
 // Declare the header for the bootloader
 __attribute__((section(".stivale2hdr"), used))
 static struct stivale2_header stivale_hdr = {
@@ -215,16 +222,15 @@ void kprint_usable_mem(struct stivale2_struct* hdr) {
 }
 
 void _start(struct stivale2_struct* hdr) {
-	// We've booted! Let's start processing tags passed to use from the bootloader
-	term_setup(hdr);
-
-	// Print a greeting
-	term_write("Hello Kernel!\n", 14);
+  // We've booted! Let's start processing tags passed to use from the bootloader
+  term_setup(hdr);
 	
-	kprint_usable_mem(hdr);
+  kprintf("Hello World\n");	
+  kprint_usable_mem(hdr);
+  idt_setup();
+  int* p = (int*)0x1;
+  *p = 123;
 
-
-
-	// We're done, just hang...
-	halt();
+  // We're done, just hang...
+  halt();
 }
