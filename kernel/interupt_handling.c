@@ -5,22 +5,8 @@
 #include "stivale2.h"
 #include "util.h"
 #include "kprint.h"
-
-typedef struct interrupt_context {
-  uintptr_t ip;
-  uint64_t cs;
-  uint64_t flags;
-  uintptr_t sp;
-  uint64_t ss;
-} __attribute__((packed)) interrupt_context_t;
-
-__attribute__((interrupt))
-void example_handler(interrupt_context_t* ctx) {
-  kprintf("example interrupt handler\n");
-  halt();
-}
-
-
+#include "handlers.h"
+#include "pic.h"
 
 // Every interrupt handler must specify a code selector. We'll use entry 5 (5*8=0x28), which
 // is where our bootloader set up a usable code selector for 64-bit mode.
@@ -75,9 +61,9 @@ void idt_set_handler(uint8_t index, void* fn, uint8_t type) {
   //   ist=0 (we aren't using an interrupt stack table, so just pass 0)
   //   selector=IDT_CODE_SELECTOR
   //not sure how to fill in the handler yet
-  idt[index].offset_0 = ((uint64_t) fn) & 0x000000000000FFFF; //bits 15-0
-  idt[index].offset_1 = ((uint64_t) fn) & 0x00000000FFFF0000; //bits 31-16
-  idt[index].offset_2 = ((uint64_t) fn) & 0xFFFFFFFF00000000; //bits 63-32
+  idt[index].offset_0 = (uint16_t) ((uint64_t) fn & 0x000000000000FFFF); //bits 15-0
+  idt[index].offset_1 = (uint16_t) (((uint64_t) fn & 0x00000000FFFF0000) >> 16); //bits 31-16
+  idt[index].offset_2 = (uint32_t) (((uint64_t) fn & 0xFFFFFFFF00000000) >> 32); //bits 63-32
   //type is passed in
   idt[index].type = type;
   //dpl is given as 0
@@ -106,10 +92,32 @@ void idt_setup() {
 	
 
   // Step 2: Use idt_set_handler() to set handlers for the standard exceptions (1--21)
-  //gonna write some blank checks ie. call handlers before they're wrote
-  idt_set_handler(14, &example_handler, IDT_TYPE_INTERRUPT);
-//  idt_set_handler(0, &divide_error_handler, IDT_TYPE_INTERRUPT);
+  
+  //INTERNAL INTERRUPTS
+  idt_set_handler(0, &divide_error_handler, IDT_TYPE_INTERRUPT);
+  idt_set_handler(1, &debug_exception_handler, IDT_TYPE_TRAP);
+  idt_set_handler(2, &nmi_interrupt_handler, IDT_TYPE_INTERRUPT);
+  idt_set_handler(3, &breakpoint_handler, IDT_TYPE_TRAP);
+  idt_set_handler(4, &overflow_interupt_handler, IDT_TYPE_TRAP);
+  idt_set_handler(5, &bound_range_exc_handler, IDT_TYPE_INTERRUPT);
+  idt_set_handler(6, &invalid_opcode_handler, IDT_TYPE_INTERRUPT);
+  idt_set_handler(7, &device_not_available, IDT_TYPE_INTERRUPT);
+  idt_set_handler(8, &double_fault_handler, IDT_TYPE_INTERRUPT);
+  idt_set_handler(9, &co_pro_seg_overrun, IDT_TYPE_INTERRUPT);
+  idt_set_handler(10, &invalid_tss_handler, IDT_TYPE_INTERRUPT);
+  idt_set_handler(11, &seg_not_present, IDT_TYPE_INTERRUPT);
+  idt_set_handler(12, &stack_seg_fault, IDT_TYPE_INTERRUPT);
+  idt_set_handler(13, &gen_mem_protection, IDT_TYPE_INTERRUPT);
+  idt_set_handler(14, &page_fault_handler, IDT_TYPE_INTERRUPT);
+  idt_set_handler(16, &fpu_floating_point_error, IDT_TYPE_INTERRUPT);
+  idt_set_handler(17, &alignment_check_handler, IDT_TYPE_INTERRUPT);
+  idt_set_handler(18, &machine_check_handler, IDT_TYPE_INTERRUPT);
+  idt_set_handler(19, &simd_floating_point_error, IDT_TYPE_INTERRUPT);
+  idt_set_handler(20, &virtualization_exception, IDT_TYPE_INTERRUPT);
+  idt_set_handler(21, &control_protection_exception, IDT_TYPE_INTERRUPT);
 
+  //EXTERNAL INTERRUPTS
+  idt_set_handler(IRQ1_INTERRUPT, &keyboard_handler, IDT_TYPE_INTERRUPT);
 
   // Step 3: Install the IDT
   idt_record_t record = {
