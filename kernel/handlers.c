@@ -37,25 +37,25 @@ void breakpoint_handler(interrupt_context_t* ctx){
 
 __attribute__((interrupt))
 void overflow_interupt_handler(interrupt_context_t* ctx){
-  kprintf("overflow error occurred\n");
+  kprintf("Overflow Error Occurred\n");
   halt();
 }
 
 __attribute__((interrupt))
 void bound_range_exc_handler(interrupt_context_t* ctx){
-  kprintf("bounder range exceeded\n");
+  kprintf("Bounded range exceeded\n");
   halt();
 }
 
 __attribute__((interrupt))
 void invalid_opcode_handler(interrupt_context_t* ctx){
-  kprintf("invalide opcode\n");
+  kprintf("OPcode invalid\n");
   halt();
 }
 
 __attribute__((interrupt))
 void device_not_available(interrupt_context_t* ctx){
-  kprintf("device not available\n");
+  kprintf("Device not available\n");
   halt();
 }
 
@@ -142,6 +142,6 @@ void control_protection_exception(interrupt_context_t* ctx, uint64_t ec){
 
 __attribute__((interrupt))
 void keyboard_handler(interrupt_context_t* ctx){
-  kprintf("%x\n", inb(0x60));
+  kprintf("%x ", inb(0x60));
   outb(PIC1_COMMAND, PIC_EOI);
 }

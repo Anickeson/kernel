@@ -232,8 +232,6 @@ void _start(struct stivale2_struct* hdr) {
   kprintf("Hello World\n");	
   //kprint_usable_mem(hdr);
   idt_setup();
-  int* p = NULL;
-  *p = 123;
 
   pic_init();
   pic_unmask_irq(1);

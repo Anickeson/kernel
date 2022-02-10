@@ -35,7 +35,7 @@ typedef struct idt_entry {
 idt_entry_t idt[256];
 
 //Will set all bits between target and target + n to a constant bit c
-void memset(void* target, uint64_t c, uint64_t n){
+void memset(void* target, uint64_t c, int n){
   uint64_t * curr = target;
   for(int i = 0; i < n; i++){
     *curr = c;
