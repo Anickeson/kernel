@@ -1,5 +1,9 @@
 #pragma once
 
+typedef void (*term_write_t)(const char*, size_t);
+
+void set_term_write(void* ptr);
+
 //Kernel Implimentation Task #1, a bunch of printing
 
 //needed strlen for kprint_s, might come in handy elsewhere
