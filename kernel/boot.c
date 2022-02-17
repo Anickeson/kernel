@@ -8,6 +8,7 @@
 #include "interupt_handling.h"
 #include "pic.h"
 #include "port.h"
+#include "circ_buff.h"
 
 // Reserve space for the stack
 static uint8_t stack[8192];
@@ -82,13 +83,18 @@ void term_setup(struct stivale2_struct* hdr) {
 
 void _start(struct stivale2_struct* hdr) {
   // We've booted! Let's start processing tags passed to use from the bootloader
+  
+  //setting stuff up
   term_setup(hdr);
-  kprintf("Hello World\n");	
-  //kprint_usable_mem(hdr);
+
+  //interupt handler being set up
   idt_setup();
 
+  //allows us to handle keyboard interupt inputs
   pic_init();
   pic_unmask_irq(1);
+
+  kprintf("Hello World\n");
 
   // We're done, just hang...
   halt();

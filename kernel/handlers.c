@@ -8,7 +8,8 @@
 #include "util.h"
 #include "pic.h"
 #include "port.h"
-
+#include "scan_to_ascii.h"
+#include "circ_buff.c"
 
 //INTERNAL INTERRUPTS
 __attribute__((interrupt))
@@ -140,8 +141,37 @@ void control_protection_exception(interrupt_context_t* ctx, uint64_t ec){
 
 //EXTERNAL INTERRUPTS
 
+//global shift key flag
+int shift_down = 0;
+
+//this handler can handle all characters and can capitalize characters when the shift key is down
+//cannot recognize capitals or special characters yet
 __attribute__((interrupt))
 void keyboard_handler(interrupt_context_t* ctx){
-  kprintf("%x ", inb(0x60));
+  //recieving the scan code
+	uint64_t key_pressed = inb(0x60);
+
+  //tracking the shift key both up and down
+	if (key_pressed == 42){//up
+    shift_down = 1;
+  } else if (key_pressed == 170){//down
+    shift_down = 0;
+
+  //if below 128 then the scan code is in out scan code conversion table
+  } else if (key_pressed < 128) {
+    char ascii_conversion = kbd_US[key_pressed];
+
+    //capitalizing if shift down and the scan code is alphabetical
+    if (shift_down && ascii_conversion <= 122 && ascii_conversion >=97){
+      ascii_conversion -= ('a' - 'A');
+    }
+
+    //printing to the terminal
+		kprintf("%c", ascii_conversion);
+
+    //write into the buffer //will need to finish buffer implementation before we get here
+    write_to_buff(ascii_conversion);
+	}
+
   outb(PIC1_COMMAND, PIC_EOI);
 }
