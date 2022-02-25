@@ -9,7 +9,7 @@
 #include "pic.h"
 #include "port.h"
 #include "scan_to_ascii.h"
-#include "circ_buff.c"
+#include "circ_buff.h"
 
 //INTERNAL INTERRUPTS
 __attribute__((interrupt))

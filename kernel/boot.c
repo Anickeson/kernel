@@ -9,6 +9,7 @@
 #include "pic.h"
 #include "port.h"
 #include "circ_buff.h"
+#include "paging.h"
 
 // Reserve space for the stack
 static uint8_t stack[8192];
@@ -68,7 +69,6 @@ void* find_tag(struct stivale2_struct* hdr, uint64_t id) {
   return NULL;
 }
 
-
 void term_setup(struct stivale2_struct* hdr) {
   // Look for a terminal tag
   struct stivale2_struct_tag_terminal* tag = find_tag(hdr, STIVALE2_STRUCT_TAG_TERMINAL_ID);
@@ -86,15 +86,35 @@ void _start(struct stivale2_struct* hdr) {
   
   //setting stuff up
   term_setup(hdr);
-
-  //interupt handler being set up
+	
+	  //interupt handler being set up
   idt_setup();
 
   //allows us to handle keyboard interupt inputs
   pic_init();
   pic_unmask_irq(1);
 
+	//setting tags for page table operations
+	uint64_t hhdm_id = 12748887341935670671;
+	uint64_t mem_tag_id = 2416171985333837319;
+
+	set_page_imp(find_tag(hdr, hhdm_id), find_tag(hdr, mem_tag_id));
+
+	buffer_setup();
+
   kprintf("Hello World\n");
+
+	uintptr_t root = read_cr3() & 0xFFFFFFFFFFFFF000;
+	int * p = (int*)0x50004000;
+	bool result = vm_map(root, (uintptr_t)p, false, true, false);
+	if(result) {
+		*p = 123;
+		kprintf("stored %d at %p\n", *p, p);
+	} else { 
+		kprintf("vm_map failed with an error\n");
+	}
+
+	translate(p);
 
   // We're done, just hang...
   halt();
