@@ -1,10 +1,4 @@
-#include <stdint.h>
-#include <stddef.h>
-#include <stdarg.h>
-
-#include "stivale2.h"
-#include "util.h"
-#include "kprint.h"
+#include "general.h"
 
 //type defined in kprint.h header
 term_write_t term_write = NULL;

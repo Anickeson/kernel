@@ -1,15 +1,6 @@
-#include <stddef.h>
-#include <stdarg.h>
-#include <stdint.h>
-
-#include "kprint.h"
-#include "stivale2.h"
-#include "handlers.h"
-#include "util.h"
-#include "pic.h"
-#include "port.h"
 #include "scan_to_ascii.h"
-#include "circ_buff.h"
+#include "general.h"
+#include "util.h"
 
 //INTERNAL INTERRUPTS
 __attribute__((interrupt))
@@ -167,11 +158,30 @@ void keyboard_handler(interrupt_context_t* ctx){
     }
 
     //printing to the terminal
-		kprintf("%c", ascii_conversion);
+		//kprintf("%c", ascii_conversion);
 
-    //write into the buffer //will need to finish buffer implementation before we get here
+    //write into the buffer 
     write_to_buff(ascii_conversion);
 	}
 
   outb(PIC1_COMMAND, PIC_EOI);
+}
+
+int64_t syscall_handler(uint64_t nr, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5) {
+  kprintf("syscall %d: %d, %d, %d, %d, %d, %d\n", nr, arg0, arg1, arg2, arg3, arg4, arg5);
+	
+	if (arg0 == SYS_read){
+		//read call: read(file descriptor, buffer, bytes to be read)
+		read(arg0, (char *) arg1, arg2);
+
+	} else if (nr == SYS_write) {
+		//write call
+		write(arg0, (char *) arg1, arg2);
+	} else {
+		//we aren't handling any other system calls yet
+		return -1;
+	}
+
+
+  return 123; //this will be changed at some point no doubt
 }

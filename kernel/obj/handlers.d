@@ -1,18 +1,27 @@
-obj/handlers.o: handlers.c kprint.h stivale2.h handlers.h util.h pic.h \
-  port.h scan_to_ascii.h circ_buff.h
+obj/handlers.o: handlers.c scan_to_ascii.h general.h stivale2.h kprint.h \
+  interupt_handling.h handlers.h pic.h port.h circ_buff.h paging.h \
+  syscalls.h util.h
 
-kprint.h:
+scan_to_ascii.h:
+
+general.h:
 
 stivale2.h:
 
-handlers.h:
+kprint.h:
 
-util.h:
+interupt_handling.h:
+
+handlers.h:
 
 pic.h:
 
 port.h:
 
-scan_to_ascii.h:
-
 circ_buff.h:
+
+paging.h:
+
+syscalls.h:
+
+util.h:

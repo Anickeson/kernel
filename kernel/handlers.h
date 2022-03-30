@@ -99,3 +99,8 @@ void control_protection_exception(interrupt_context_t* ctx, uint64_t ec);
 //KEYBOARD INTERRUPT IRQ1_INTERRUPT (defined in pic.h)
 __attribute__((interrupt))
 void keyboard_handler(interrupt_context_t* ctx);
+
+//SYSTEM CALL INTERRUPT (0X80) 
+//interupt 0x80 invoked in syscall.s
+int64_t syscall_handler(uint64_t nr, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5); 
+

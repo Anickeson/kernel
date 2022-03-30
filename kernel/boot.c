@@ -1,15 +1,5 @@
-#include <stdint.h>
-#include <stddef.h>
-#include <stdarg.h>
-
-#include "stivale2.h"
+#include "general.h"
 #include "util.h"
-#include "kprint.h"
-#include "interupt_handling.h"
-#include "pic.h"
-#include "port.h"
-#include "circ_buff.h"
-#include "paging.h"
 
 // Reserve space for the stack
 static uint8_t stack[8192];
@@ -81,6 +71,8 @@ void term_setup(struct stivale2_struct* hdr) {
   set_term_write((term_write_t)tag->term_write);
 }
 
+
+
 void _start(struct stivale2_struct* hdr) {
   // We've booted! Let's start processing tags passed to use from the bootloader
   
@@ -100,12 +92,47 @@ void _start(struct stivale2_struct* hdr) {
 
 	set_page_imp(find_tag(hdr, hhdm_id), find_tag(hdr, mem_tag_id));
 
-	buffer_setup();
-
   kprintf("Hello World\n");
 
+
+	/*TESTS*/
+
+	//Kprintf//
+	char buff[5] = "work";
+	kprintf("D: %d, C: %c, S: %s, P: %p, X: %x, %%\n", 'a', 'a', buff, &buff, 'a');
+	kprintf("\n");
+
+	//Print Usable Memory//
+	/*
+	kprint_usable_mem(hdr);
+	kprintf("\n");
+	*/
+
+	//Catch Interupts//
+	//int* r = NULL;
+	//*r = 123;
+
+	//Handling Keyboard Interrups//
+	//This one is just checked by Typing in the terminal
+	
+	//Keyboard Input Buffer
+	/*
+	char gotten = kgetc();
+	kprintf("recieved from buffer %c\n", gotten);
+	kprintf("\n");
+	*/
+
+	//Paging
+		//translation
+	
+	translate(stack);
+	kprintf("\n");
+	
+	kprintf("%c - continuing\n", kgetc());
+		//mapping
+	
 	uintptr_t root = read_cr3() & 0xFFFFFFFFFFFFF000;
-	int * p = (int*)0x50004000;
+	int * p = (int *) NULL;//(int*) 0x50003000;
 	bool result = vm_map(root, (uintptr_t)p, false, true, false);
 	if(result) {
 		*p = 123;
@@ -113,8 +140,46 @@ void _start(struct stivale2_struct* hdr) {
 	} else { 
 		kprintf("vm_map failed with an error\n");
 	}
+	kprintf("\n");
+	
+		//unmapping
+	/*
+	result = vm_unmap(root, (uintptr_t)p);
+	if(result) {
+		kprintf("vm_unmap sucessfully unmapped p\n");
+	} else {
+		kprintf("failed to unmap %d at %p\n", *p, p);
+	}
+	*/
 
-	translate(p);
+	//System Calls
+		//syntax: syscall(SYS_read/SYS_write, fd, buffer, bytes written or read)
+	/*
+	kprintf("writing \"write\" to buffer\n");
+	char write_buff[6] = "write";
+	long wc = syscall(SYS_write, 1, write_buff, 5);
+	if (wc <= 0) {
+		kprintf("write failed\n");
+	}
+
+	kprintf("reading\n");
+	char read_buff[6];
+	long rc = syscall(SYS_read, 0, read_buff, 6);
+	if (rc <= 0) {
+		kprintf("read failed\n");
+	} else {
+		read_buff[rc] = '\0';
+		kprintf("read '%s'\n", read_buff);
+	}
+	*/
+
+	//Loading Executable
+	
+	//Std Library
+	
+	//Switching to User Mode
+	
+
 
   // We're done, just hang...
   halt();

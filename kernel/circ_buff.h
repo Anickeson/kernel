@@ -1,10 +1,11 @@
 #pragma once
 
-void buffer_setup();
+#define BUFF_LENGTH 1000
 
-void write_to_buff(uint64_t ch);
+void write_to_buff(char ch);
 
 char read_from_buff();
+
 
 /**
  * Read one character from the keyboard buffer. If the keyboard buffer is empty this function will block until a key is pressed.

@@ -1,64 +1,40 @@
-#include <stdint.h>
-#include <stddef.h>
+#include "general.h"
 
-#include "stivale2.h"
-#include "util.h"
-#include "kprint.h"
-#include "circ_buff.h"
 
-#define BUFF_LENGTH 1000
+char buffer[BUFF_LENGTH]; 
+volatile uint64_t write_count = 0; //index will only ever be incremented
+volatile uint64_t read_ind = 0; //indicies will be modded on array access to make buff circular
 
-typedef struct circ_buff{
-	uint64_t read;
-	uint64_t write;
-	char characters[BUFF_LENGTH];
-} circ_buff_t;
 
-circ_buff_t buff;
+void write_to_buff(char ch){
 
-void buffer_setup(){
-	buff.read = 0;
-	buff.write = 0;
-}
-
-void write_to_buff(uint64_t ch){
-	//writes at write index
-
-	buff.characters[buff.write] = ch;
-	if((buff.write + 1)	% BUFF_LENGTH == 0) {
-    if (buff.write == buff.read) { 
-      //if true then we're over writing unread buffer items and will move read index with us
-			buff.write = 0;
-      buff.read = 0;
-    } else {
-      buff.write = 0;
-    }
-	} else {
-    if (buff.write == buff.read) { 
-      //if true then we're over writing unread buffer items and will move read index with us
-			buff.write++;
-      buff.read++;
-    } else {
-			buff.write++;
-    }
+	int mod_write = write_count % BUFF_LENGTH;
+	int mod_read = read_ind % BUFF_LENGTH;
+	//write at modded write count	
+	
+	buffer[mod_write] = ch;
+	
+	//will need to increment read_ind when we're over writing 
+	//increment will not be necessary when buffer is empty
+	if (mod_write == mod_read && (write_count - read_ind) != 0) {
+		read_ind++;
 	}
+
+	//increment write count after writing
+	write_count++;
 
 }
 
 char read_from_buff(){
-	//reads character at read index
-  
+
+
   //if nothing new to read then return -1
-  if (buff.write == buff.read) {
+  if ((write_count - read_ind) <= 0){
     return -1;
   }
 
-	uint64_t output = buff.characters[buff.read];
-	if((buff.read + 1) % BUFF_LENGTH == 0) {
-		buff.read = 0;
-	} else {
-		buff.read++;
-	}
+	char output = buffer[read_ind % BUFF_LENGTH]; 
+	read_ind++;
 	return output;
 }
 
@@ -66,7 +42,12 @@ char kgetc(){
   //call read_from_buff until it returns anything but -1
 
   char output;
-  while ((output = read_from_buff()) == -1);
+  while (1){
+		output = read_from_buff();
+		if (output != -1){
+			break;
+		}
+	}
   return output;
 }
 

@@ -1,12 +1,5 @@
-#include <stdint.h>
-#include <stdarg.h>
-#include <stddef.h>
-
-#include "stivale2.h"
+#include "general.h"
 #include "util.h"
-#include "kprint.h"
-#include "handlers.h"
-#include "pic.h"
 
 // Every interrupt handler must specify a code selector. We'll use entry 5 (5*8=0x28), which
 // is where our bootloader set up a usable code selector for 64-bit mode.
@@ -35,7 +28,7 @@ typedef struct idt_entry {
 idt_entry_t idt[256];
 
 //Will set all bits between target and target + n to a constant bit c
-void memset(void* target, uint64_t c, int n){
+void memset(void* target, int c, int n){
   uint64_t * curr = target;
   for(int i = 0; i < n; i++){
     *curr = c;
@@ -76,11 +69,6 @@ void idt_set_handler(uint8_t index, void* fn, uint8_t type) {
   idt[index].selector = IDT_CODE_SELECTOR;
 }
 
-// This struct is used to load an IDT once we've set it up
-typedef struct idt_record {
-  uint16_t size;
-  void* base;
-} __attribute__((packed)) idt_record_t;
 
 /**
  * Initialize an interrupt descriptor table, set handlers for standard exceptions, and install
@@ -118,6 +106,7 @@ void idt_setup() {
 
   //EXTERNAL INTERRUPTS
   idt_set_handler(IRQ1_INTERRUPT, &keyboard_handler, IDT_TYPE_INTERRUPT);
+  idt_set_handler(0x80, syscall_entry, IDT_TYPE_TRAP);
 
   // Step 3: Install the IDT
   idt_record_t record = {

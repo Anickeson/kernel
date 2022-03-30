@@ -1,12 +1,25 @@
-obj/interupt_handling.o: interupt_handling.c stivale2.h util.h kprint.h \
-  handlers.h pic.h
+obj/interupt_handling.o: interupt_handling.c general.h stivale2.h \
+  kprint.h interupt_handling.h handlers.h pic.h port.h circ_buff.h \
+  paging.h syscalls.h util.h
+
+general.h:
 
 stivale2.h:
 
-util.h:
-
 kprint.h:
+
+interupt_handling.h:
 
 handlers.h:
 
 pic.h:
+
+port.h:
+
+circ_buff.h:
+
+paging.h:
+
+syscalls.h:
+
+util.h:

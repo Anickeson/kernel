@@ -146,7 +146,6 @@ uintptr_t pmem_alloc(){
 //this function is just a pop function to the free list (linked list) (you need to implement a linked list)
 
 void pmem_free(uintptr_t p){
-	memset((hhdm_tag->addr + p), 0, PAGE_SIZE);
 	freelist_t * new_page = (freelist_t *) (hhdm_tag->addr + p);
 	new_page->phys_address = p;
 	new_page->next_page = first_page;
@@ -166,6 +165,63 @@ bool vm_map(uintptr_t root, uintptr_t address, bool user, bool writable, bool ex
 //store the virtual and physical addresses
 	uintptr_t phys_addr = root;
 	pt_entry_t * virt_addr = (pt_entry_t *) (phys_addr + hhdm_tag->addr); //virtual address of top level table
+	kprintf("phys: %p -- virt: %p\n", phys_addr, (uintptr_t) virt_addr);
+
+	// get page table indicies from given address
+	uint16_t indicies[4] = {
+		(address >> 12) & 0x1FF,
+		(address >> 21) & 0x1FF,
+		(address >> 30) & 0x1FF,
+		(address >> 39) & 0x1FF };
+	kprintf("indicies: %d, %d, %d, %d\n\n", indicies[0], 	indicies[1], indicies[2], indicies[3]);
+	
+	for (int i = 4; i > 0; i--) {
+		kprintf("%c - continuing\n", kgetc());
+		
+		pt_entry_t * new_pt_entry;
+
+		//do not write bits until we are at level 1 page table
+		kprintf("%d\n", i);
+		kprintf("next phys addr: %p\n", virt_addr[indicies[i-1]]);
+
+		if (!virt_addr[indicies[i-1]].present){
+			kprintf("allocating a new page\n");
+			uintptr_t phys_pt_space = pmem_alloc();
+			kprintf("the newly allocated space: %p\n", phys_pt_space);
+			new_pt_entry = (pt_entry_t *) (phys_pt_space + hhdm_tag->addr);
+			kprintf("virt address for new entry: %p\n", new_pt_entry);
+			new_pt_entry->present = 1;
+			new_pt_entry->user = 1;
+			new_pt_entry->writable = 1;
+			new_pt_entry->no_execute = 1; //page table entry shouldn't be executable??
+			new_pt_entry->address = phys_pt_space;
+			virt_addr[indicies[i-1]] = *new_pt_entry;
+			kprintf("page allocated and new table created\n");
+		} else {
+			kprintf("page already present\n");
+		}
+			
+		phys_addr = (uintptr_t) (virt_addr[indicies[i-1]].address);//<< 12)
+		virt_addr = (pt_entry_t *) (phys_addr + hhdm_tag->addr);	
+		kprintf("phys: %p -- virt: %p\n\n", phys_addr, (uintptr_t) virt_addr);
+
+		if (i == 1) {
+			kprintf("allocating the final entry's physical page space\n");
+
+			uintptr_t phys_mem_space = pmem_alloc();
+			kprintf("allocating phys: %p\n", phys_mem_space);
+			new_pt_entry->address = phys_mem_space;
+		}
+	}
+	return true;
+}
+
+bool vm_unmap(uintptr_t root, uintptr_t address){
+	//will navigate to the bottom and wipe the bottom page entry while setting no exectute to one
+	//call pmem_free() on the spacea
+	
+	uintptr_t phys_addr = root;
+	pt_entry_t * virt_addr = (pt_entry_t *) (phys_addr + hhdm_tag->addr); //virtual address of top level table
 	
 	// get page table indicies from given address
 	uint16_t indicies[4] = {
@@ -175,38 +231,30 @@ bool vm_map(uintptr_t root, uintptr_t address, bool user, bool writable, bool ex
 		(address >> 39) & 0x1FF };
 	
 	for (int i = 4; i > 0; i--) {
-		//do not write bits until we are at level 1 page table
+		//do not change bits until we are at level 1 page table
 		if (i > 1) {
 			if (!virt_addr[indicies[i-1]].present){
-				uintptr_t phys_pt_space = pmem_alloc();
-				pt_entry_t * new_pt_entry = (pt_entry_t *) (phys_pt_space + hhdm_tag->addr);
-				new_pt_entry->present = 1;
-				new_pt_entry->user = 1;
-				new_pt_entry->writable = 1;
-				new_pt_entry->no_execute = 1; //page table entry shouldn't be executable??
-				new_pt_entry->address = phys_pt_space;
-				virt_addr[indicies[i-1]] = *new_pt_entry;
-			}
-			phys_addr = (uintptr_t) virt_addr[indicies[i-1]].address << 12;
-			virt_addr = (pt_entry_t *) (phys_addr + hhdm_tag->addr);
-		} else {
-			if (virt_addr[indicies[i-1]].present){//probably shouldn't be writing to anything that is already mapped??
+				//if the entry is not present then the address is invalid
 				return false;
 			}
-			uintptr_t phys_pt_space = pmem_alloc();
-			pt_entry_t * new_pt_entry = (pt_entry_t *) (phys_pt_space + hhdm_tag->addr);
-			new_pt_entry->present = 1;
-			new_pt_entry->user = user;
-			new_pt_entry->writable = writable;
-			new_pt_entry->no_execute = (executable ? 0 : 1 ); 
-			new_pt_entry->address = phys_pt_space;
-			virt_addr[indicies[i-1]] = *new_pt_entry;
+			phys_addr = (uintptr_t) (virt_addr[indicies[i-1]].address << 12);
+			virt_addr = (pt_entry_t *) (phys_addr + hhdm_tag->addr);
+		} else {
+			if (!virt_addr[indicies[i-1]].present){
+				return false;
+			}
+
+			pmem_free((uintptr_t) (virt_addr[indicies[i-1]].address << 12));
+			virt_addr[indicies[i-1]].user = 0;
+			virt_addr[indicies[i-1]].writable = 0;
+			virt_addr[indicies[i-1]].no_execute = 1;
+		 	virt_addr[indicies[i-1]].address = 0x0;
+			virt_addr[indicies[i-1]].present = 0;
 		}
 	}
 	return true;
 }
 
-bool vm_unmap(uintptr_t root, uintptr_t address);
 
 bool vm_protect(uintptr_t root, uintptr_t address, bool user, bool writable, bool executable){
 	uintptr_t phys_addr = root;
