@@ -1,6 +1,14 @@
 #include "general.h"
 #include "util.h"
 
+/*
+ * Where we are at:
+ * 	need to implement memcpy and vm_protect in order to finish loading executables
+ * 	need to implement library
+ * 	need to be able to swap out of kernel mode
+ */
+
+
 // Reserve space for the stack
 static uint8_t stack[8192];
 
@@ -91,28 +99,35 @@ void _start(struct stivale2_struct* hdr) {
 	uint64_t mem_tag_id = 2416171985333837319;
 
 	set_page_imp(find_tag(hdr, hhdm_id), find_tag(hdr, mem_tag_id));
+	
+	//setting tag for executables
+	uint64_t modules_tag_id = 0x4b6fe466aade04ce;
+	set_mod_tag(find_tag(hdr, modules_tag_id));
 
+	//Greetings
   kprintf("Hello World\n");
 
 
 	/*TESTS*/
 
-	//Kprintf//
+	//Kprintf// success - 3/31/2022
+	/*
 	char buff[5] = "work";
 	kprintf("D: %d, C: %c, S: %s, P: %p, X: %x, %%\n", 'a', 'a', buff, &buff, 'a');
 	kprintf("\n");
+	*/
 
-	//Print Usable Memory//
+	//Print Usable Memory// success - 3/31/2022
 	/*
 	kprint_usable_mem(hdr);
 	kprintf("\n");
 	*/
 
-	//Catch Interupts//
+	//Catch Interupts// success - 3/31/2022
 	//int* r = NULL;
 	//*r = 123;
 
-	//Handling Keyboard Interrups//
+	//Handling Keyboard Interrups// success - 3/31/2022
 	//This one is just checked by Typing in the terminal
 	
 	//Keyboard Input Buffer
@@ -122,17 +137,19 @@ void _start(struct stivale2_struct* hdr) {
 	kprintf("\n");
 	*/
 
-	//Paging
-		//translation
-	
+	//Paging 
+		//translation// success - 3/31/2022
+	/*	
 	translate(stack);
 	kprintf("\n");
 	
 	kprintf("%c - continuing\n", kgetc());
-		//mapping
-	
+	*/
+
+		//mapping// success - 3/31/2022
+	int * p = (int*) 0x50003000;
 	uintptr_t root = read_cr3() & 0xFFFFFFFFFFFFF000;
-	int * p = (int *) NULL;//(int*) 0x50003000;
+	/*
 	bool result = vm_map(root, (uintptr_t)p, false, true, false);
 	if(result) {
 		*p = 123;
@@ -141,20 +158,22 @@ void _start(struct stivale2_struct* hdr) {
 		kprintf("vm_map failed with an error\n");
 	}
 	kprintf("\n");
+	*/
+
+		//unmapping// failed - 3/31/2022
 	
-		//unmapping
-	/*
-	result = vm_unmap(root, (uintptr_t)p);
-	if(result) {
+	bool result_unmap = vm_unmap(root, (uintptr_t)p);
+	if(result_unmap) {
 		kprintf("vm_unmap sucessfully unmapped p\n");
 	} else {
 		kprintf("failed to unmap %d at %p\n", *p, p);
 	}
-	*/
+	
 
-	//System Calls
+	//System Calls// success - 3/31/2022
 		//syntax: syscall(SYS_read/SYS_write, fd, buffer, bytes written or read)
-	/*
+
+	/*	
 	kprintf("writing \"write\" to buffer\n");
 	char write_buff[6] = "write";
 	long wc = syscall(SYS_write, 1, write_buff, 5);
@@ -174,7 +193,9 @@ void _start(struct stivale2_struct* hdr) {
 	*/
 
 	//Loading Executable
-	
+	print_mod_strings();
+	load_exec();
+
 	//Std Library
 	
 	//Switching to User Mode
