@@ -4,7 +4,6 @@
 #define IDT_TYPE_INTERRUPT 0xE
 #define IDT_TYPE_TRAP 0xF
 
-void memset(void* target, int c, int n);
 
 /**
  * Set an interrupt handler for the given interrupt number.

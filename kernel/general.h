@@ -14,6 +14,8 @@
 #include "circ_buff.h"
 #include "paging.h"
 #include "syscalls.h"
+#include "executable.h"
+#include "utilities.h"
 
 #define SYS_read 0
 #define SYS_write 1

@@ -48,23 +48,31 @@ void load_exec(){
 
 			if (curr_entry.p_flags == 1){
 				//execute only
+				vm_protect(read_cr3(), curr_entry.p_vaddr, false, false, true);
 			} else if (curr_entry.p_flags == 2){
 				//write only
+				vm_protect(read_cr3(), curr_entry.p_vaddr, false, true, false);
 			} else if (curr_entry.p_flags == 3){
 				//execute and write
+				vm_protect(read_cr3(), curr_entry.p_vaddr, false, true, true);
 			} else if (curr_entry.p_flags == 4){
-				//read only
+				//read only				
+				vm_protect(read_cr3(), curr_entry.p_vaddr, true, false, false);
 			} else if (curr_entry.p_flags == 5){
-				//read and execute
+				//read and execute				
+				vm_protect(read_cr3(), curr_entry.p_vaddr, true, false, true);
 			} else if (curr_entry.p_flags == 6){
 				//read and write
+				vm_protect(read_cr3(), curr_entry.p_vaddr, true, true, false);
 			} else if (curr_entry.p_flags == 7){
 				//read, write, and execute
+				vm_protect(read_cr3(), curr_entry.p_vaddr, true, true, true);
 			}
 		}
 	}
 
 	//cast entry address to function pointer and call it
-
+	void (*entry_func)(void) = header->e_entry;
+	entry_func();
 }
 

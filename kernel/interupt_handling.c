@@ -27,14 +27,6 @@ typedef struct idt_entry {
 // Make an IDT
 idt_entry_t idt[256];
 
-//Will set all bits between target and target + n to a constant bit c
-void memset(void* target, int c, int n){
-  uint64_t * curr = target;
-  for(int i = 0; i < n; i++){
-    *curr = c;
-    curr++;
-  }
-}
 
 /**
  * Set an interrupt handler for the given interrupt number.

@@ -1,12 +1,4 @@
-#include <stdint.h>
-#include <stddef.h>
-#include <stdarg.h>
-#include <stdbool.h>
-
-#include "stivale2.h"
-#include "kprint.h"
-#include "paging.h"
-#include "interupt_handling.h"
+#include "general.h"
 
 #define PAGE_SIZE 4096
 
@@ -78,7 +70,7 @@ void translate(void* address) {
 		}
 		kprintf("\n");
 
-		phys_addr = (uintptr_t) virt_addr[indicies[i-1]].address << 12;
+		phys_addr = (uintptr_t) virt_addr[indicies[i-1]].address;// << 12;
 		virt_addr = (pt_entry_t *) (phys_addr + hhdm_addr);
 	}
 	kprintf("%p maps to %p\n", address, phys_addr);
@@ -165,7 +157,6 @@ bool vm_map(uintptr_t root, uintptr_t address, bool user, bool writable, bool ex
 //store the virtual and physical addresses
 	uintptr_t phys_addr = root;
 	pt_entry_t * virt_addr = (pt_entry_t *) (phys_addr + hhdm_tag->addr); //virtual address of top level table
-//	kprintf("phys: %p -- virt: %p\n", phys_addr, (uintptr_t) virt_addr);
 
 	// get page table indicies from given address
 	uint16_t indicies[4] = {
@@ -173,44 +164,41 @@ bool vm_map(uintptr_t root, uintptr_t address, bool user, bool writable, bool ex
 		(address >> 21) & 0x1FF,
 		(address >> 30) & 0x1FF,
 		(address >> 39) & 0x1FF };
-//	kprintf("indicies: %d, %d, %d, %d\n\n", indicies[0], 	indicies[1], indicies[2], indicies[3]);
 	
 	for (int i = 4; i > 0; i--) {
-		//kprintf("%c - continuing\n", kgetc());
 		
-		pt_entry_t * new_pt_entry;
+		pt_entry_t * curr_pt_entry = &virt_addr[indicies[i-1]];
 
 		//do not write bits until we are at level 1 page table
-//		kprintf("%d\n", i);
-//		kprintf("next phys addr: %p\n", virt_addr[indicies[i-1]]);
 
+		//if it is not present then we'll need to create a new page table
 		if (!virt_addr[indicies[i-1]].present){
-//			kprintf("allocating a new page\n");
 			uintptr_t phys_pt_space = pmem_alloc();
-//			kprintf("the newly allocated space: %p\n", phys_pt_space);
-			new_pt_entry = (pt_entry_t *) (phys_pt_space + hhdm_tag->addr);
-//			kprintf("virt address for new entry: %p\n", new_pt_entry);
-			new_pt_entry->present = 1;
-			new_pt_entry->user = 1;
-			new_pt_entry->writable = 1;
-			new_pt_entry->no_execute = 1; //page table entry shouldn't be executable??
-			new_pt_entry->address = phys_pt_space;
-			virt_addr[indicies[i-1]] = *new_pt_entry;
-//			kprintf("page allocated and new table created\n");
-/*		} else {
-			kprintf("page already present\n");
-*/		}
-			
-		phys_addr = (uintptr_t) (virt_addr[indicies[i-1]].address);//<< 12)
+			curr_pt_entry = (pt_entry_t *) (phys_pt_space + hhdm_tag->addr);
+			curr_pt_entry->present = 1;
+			curr_pt_entry->user = 1;
+			curr_pt_entry->writable = 1;
+			curr_pt_entry->no_execute = 1; 
+			curr_pt_entry->address = phys_pt_space;
+			virt_addr[indicies[i-1]] = *curr_pt_entry;
+		}
+		
+		//navigate into the page table to get to the next level	
+		phys_addr = (uintptr_t) (virt_addr[indicies[i-1]].address);
 		virt_addr = (pt_entry_t *) (phys_addr + hhdm_tag->addr);	
-//		kprintf("phys: %p -- virt: %p\n\n", phys_addr, (uintptr_t) virt_addr);
 
+		//if we're at the lowest level page table then we will want put in the file permisons and the address
 		if (i == 1) {
-//			kprintf("allocating the final entry's physical page space\n");
 
 			uintptr_t phys_mem_space = pmem_alloc();
-//			kprintf("allocating phys: %p\n", phys_mem_space);
-			new_pt_entry->address = phys_mem_space;
+			curr_pt_entry->user = user;
+			curr_pt_entry->writable = writable;
+			if (executable) {
+				curr_pt_entry->no_execute = 0;
+			} else {
+				curr_pt_entry->no_execute = 1;
+			}
+			curr_pt_entry->address = phys_mem_space;
 		}
 	}
 	return true;
@@ -218,11 +206,11 @@ bool vm_map(uintptr_t root, uintptr_t address, bool user, bool writable, bool ex
 
 bool vm_unmap(uintptr_t root, uintptr_t address){
 	//will navigate to the bottom and wipe the bottom page entry while setting no exectute to one
-	//call pmem_free() on the spacea
+	//call pmem_free() on the space
 	
 	uintptr_t phys_addr = root;
 	pt_entry_t * virt_addr = (pt_entry_t *) (phys_addr + hhdm_tag->addr); //virtual address of top level table
-	
+
 	// get page table indicies from given address
 	uint16_t indicies[4] = {
 		(address >> 12) & 0x1FF,
@@ -231,35 +219,35 @@ bool vm_unmap(uintptr_t root, uintptr_t address){
 		(address >> 39) & 0x1FF };
 	
 	for (int i = 4; i > 0; i--) {
-		//do not change bits until we are at level 1 page table
-		if (i > 1) {
-			if (!virt_addr[indicies[i-1]].present){
-				//if the entry is not present then the address is invalid
-				return false;
-			}
-			phys_addr = (uintptr_t) (virt_addr[indicies[i-1]].address << 12);
-			virt_addr = (pt_entry_t *) (phys_addr + hhdm_tag->addr);
-		} else {
-			if (!virt_addr[indicies[i-1]].present){
-				return false;
-			}
+		
+		pt_entry_t * curr_pt_entry = &virt_addr[indicies[i-1]];
 
-			pmem_free((uintptr_t) (virt_addr[indicies[i-1]].address << 12));
-			virt_addr[indicies[i-1]].user = 0;
-			virt_addr[indicies[i-1]].writable = 0;
-			virt_addr[indicies[i-1]].no_execute = 1;
-		 	virt_addr[indicies[i-1]].address = 0x0;
-			virt_addr[indicies[i-1]].present = 0;
+		//do not write bits until we are at level 1 page table
+
+		//if it is not present then we'll need to create a new page table
+		if (!virt_addr[indicies[i-1]].present){
+			return false;
+		}
+		
+		//navigate into the page table to get to the next level	
+		phys_addr = (uintptr_t) (virt_addr[indicies[i-1]].address);
+		virt_addr = (pt_entry_t *) (phys_addr + hhdm_tag->addr);	
+
+		//if we're at the lowest level page table then we will free the space 
+		if (i == 1) {
+			curr_pt_entry = &virt_addr[indicies[i-1]];
+			pmem_free(curr_pt_entry->address);
+			memset(curr_pt_entry, 0, 64);
 		}
 	}
 	return true;
 }
-
 
 bool vm_protect(uintptr_t root, uintptr_t address, bool user, bool writable, bool executable){
+	
 	uintptr_t phys_addr = root;
 	pt_entry_t * virt_addr = (pt_entry_t *) (phys_addr + hhdm_tag->addr); //virtual address of top level table
-	
+
 	// get page table indicies from given address
 	uint16_t indicies[4] = {
 		(address >> 12) & 0x1FF,
@@ -268,23 +256,31 @@ bool vm_protect(uintptr_t root, uintptr_t address, bool user, bool writable, boo
 		(address >> 39) & 0x1FF };
 	
 	for (int i = 4; i > 0; i--) {
-		//do not change bits until we are at level 1 page table
-		if (i > 1) {
-			if (!virt_addr[indicies[i-1]].present){
-				//if the entry is not present then the address is invalid
-				return false;
+		
+		pt_entry_t * curr_pt_entry = &virt_addr[indicies[i-1]];
+
+		//do not write bits until we are at level 1 page table
+
+		//if it is not present then we'll need to create a new page table
+		if (!virt_addr[indicies[i-1]].present){
+			return false;
+		}
+		
+		//navigate into the page table to get to the next level	
+		phys_addr = (uintptr_t) (virt_addr[indicies[i-1]].address);
+		virt_addr = (pt_entry_t *) (phys_addr + hhdm_tag->addr);	
+
+		//if we're at the lowest level page table then we will want put in the file permisons and the address
+		if (i == 1) {
+			curr_pt_entry = &virt_addr[indicies[i-1]];
+			curr_pt_entry->user = user;
+			curr_pt_entry->writable = writable;
+			if (executable) {
+				curr_pt_entry->no_execute = 0;
+			} else {
+				curr_pt_entry->no_execute = 1;
 			}
-			phys_addr = (uintptr_t) virt_addr[indicies[i-1]].address << 12;
-			virt_addr = (pt_entry_t *) (phys_addr + hhdm_tag->addr);
-		} else {
-			if (!virt_addr[indicies[i-1]].present){
-				return false;
-			}
-			virt_addr[indicies[i-1]].user = user;
-			virt_addr[indicies[i-1]].writable = writable;
-			virt_addr[indicies[i-1]].no_execute = (executable ? 0 : 1 ); 
 		}
 	}
 	return true;
 }
-

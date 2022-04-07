@@ -149,7 +149,7 @@ void _start(struct stivale2_struct* hdr) {
 		//mapping// success - 3/31/2022
 	int * p = (int*) 0x50003000;
 	uintptr_t root = read_cr3() & 0xFFFFFFFFFFFFF000;
-	/*
+	
 	bool result = vm_map(root, (uintptr_t)p, false, true, false);
 	if(result) {
 		*p = 123;
@@ -158,17 +158,25 @@ void _start(struct stivale2_struct* hdr) {
 		kprintf("vm_map failed with an error\n");
 	}
 	kprintf("\n");
-	*/
-
-		//unmapping// failed - 3/31/2022
 	
+
+		//unmapping// success - 4/6/2022
+	
+	/*
 	bool result_unmap = vm_unmap(root, (uintptr_t)p);
 	if(result_unmap) {
 		kprintf("vm_unmap sucessfully unmapped p\n");
 	} else {
 		kprintf("failed to unmap %d at %p\n", *p, p);
 	}
-	
+	*/
+
+		//changing permissions// success - 4/6/2022
+	/*
+	translate((uintptr_t) p);	
+	bool result_vm_protect = vm_protect(root, (uintptr_t)p, 0, 0, 0);
+	translate((uintptr_t) p);	
+	*/
 
 	//System Calls// success - 3/31/2022
 		//syntax: syscall(SYS_read/SYS_write, fd, buffer, bytes written or read)
@@ -196,8 +204,29 @@ void _start(struct stivale2_struct* hdr) {
 	print_mod_strings();
 	load_exec();
 
+	//load_exec();
+
 	//Std Library
+	//basically just a space to test random utility commands
+		//memset// success - 4/6/2022
+	/*	
+	int ones[6] = {1, 2, 3, 4, 5, 6};
+	kprintf("%d%d%d%d%d%d\n", ones[0], ones[1], ones[2], ones[3], ones[4], ones[5]);
+	memset(ones, 0, 6);
+	kprintf("%d%d%d%d%d%d\n", ones[0], ones[1], ones[2], ones[3], ones[4], ones[5]);
+
+		//memcpy// success - 4/6/2022
+	int nums[4] = {1, 2, 3, 4};
+	memcpy(ones, nums, 4);
+	kprintf("%d%d%d%d%d%d\n", ones[0], ones[1], ones[2], ones[3], ones[4], ones[5]);
 	
+	char string[7] = {"a", "b", "c", "d", "e", "f", "\0"};
+	char strings[7] = "abcdef";
+	char new_string[7];
+	memcpy(new_string, strings, 7);
+	kprintf("%s\n%s\n", strings, new_string);
+	*/
+
 	//Switching to User Mode
 	
 
